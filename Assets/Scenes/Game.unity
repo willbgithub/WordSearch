@@ -252,6 +252,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   CellPrefab: {fileID: 4318906445669767074, guid: 73d8f9809d388c74e9d2dfb81e6a5de6, type: 3}
+  CellBoard: {fileID: 2045281541}
+  sizeX: 8
+  sizeY: 8
+  cellSize: 80
 --- !u!4 &313669728
 Transform:
   m_ObjectHideFlags: 0
@@ -614,7 +618,7 @@ MonoBehaviour:
   m_ChildAlignment: 4
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 80, y: 80}
+  m_CellSize: {x: 77, y: 80}
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 1
   m_ConstraintCount: 3

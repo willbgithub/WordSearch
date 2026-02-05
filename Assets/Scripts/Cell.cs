@@ -8,19 +8,15 @@ public class Cell : MonoBehaviour
     private char character;
     private Color main = Color.white, highlight = Color.yellow;
     [SerializeField] private GameObject background, display;
-
-    public void SetCoordinate(Vector2Int value)
+    
+    public void Background(Color color)
     {
-        coordinate = value;
+        main = color;
+        background.GetComponent<Image>().color = color;
     }
-    public void SetCharacter(char value)
+    public Color Background()
     {
-        character = value;
-        display.GetComponent<TMP_Text>().text = value.ToString();
-    }
-    public void SetColor(Color color)
-    {
-
+        return main;
     }
     public void Highlight(bool value)
     {
@@ -33,11 +29,24 @@ public class Cell : MonoBehaviour
             background.GetComponent<Image>().color = main;
         }
     }
-    public Vector2Int GetCoordinate()
+    public Color Highlight()
+    {
+        return highlight;
+    }
+    public void Coordinate(Vector2Int value)
+    {
+        coordinate = value;
+    }
+    public Vector2Int Coordinate()
     {
         return coordinate;
     }
-    public char GetCharacter()
+    public void Character(char value)
+    {
+        character = value;
+        display.GetComponent<TMP_Text>().text = value.ToString();
+    }
+    public char Character()
     {
         return character;
     }
