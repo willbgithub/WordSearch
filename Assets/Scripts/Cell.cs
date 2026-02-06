@@ -6,6 +6,7 @@ public class Cell : MonoBehaviour
 {
     private Vector2Int coordinate;
     private char character;
+    private bool locked;
     private Color main = Color.white, highlight = Color.yellow;
     [SerializeField] private GameObject background, display;
     
@@ -44,10 +45,22 @@ public class Cell : MonoBehaviour
     public void Character(char value)
     {
         character = value;
-        display.GetComponent<TMP_Text>().text = value.ToString();
+        display.GetComponent<TMP_Text>().text  = value.ToString();
+    }
+    public void Randomize()
+    {
+        Character((char)(Random.Range('A', 'Z')));
     }
     public char Character()
     {
         return character;
+    }
+    public void Locked(bool value)
+    {
+        locked = value;
+    }
+    public bool Locked()
+    {
+        return locked;
     }
 }
