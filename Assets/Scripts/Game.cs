@@ -9,17 +9,47 @@ using UnityEngine.UIElements;
 public class Game : MonoBehaviour
 {
     [SerializeField] private GameObject CellPrefab, CellBoard;
-    private const int COLUMNS=8, ROWS=8;
+    private const int COLUMNS=9, ROWS=9;
     [SerializeField] private float cellSize;
     private Cell[,] cells = new Cell[COLUMNS, ROWS];
     private List<Cell> unoccupiedCells = new List<Cell>();
     [SerializeField] private List<string> words;
+    private List<string> knownWords = new List<string>();
+    [SerializeField] private bool excess, highlight;
+    private int progress2 = 0;
     void Start()
     {
         GenerateBoard();
-        AddWord("SKELETONG");
+        AddWords(words);
     }
+    private void AddWords(List<string> list)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            AddWord(list[i]);
+        }
+        ScrambleUnlocked();
+        for (int i = 0; i < knownWords.Count; i++)
+        {
 
+        }
+    }
+    public void Next()
+    {
+        if (progress2 >= words.Count)
+        {
+            return;
+        }
+        AddWord(words[progress2]);
+        progress2++;
+    }
+    private void ScrambleUnlocked()
+    {
+        for(int i = 0; i < unoccupiedCells.Count; i++)
+        {
+            unoccupiedCells[i].Randomize();
+        }
+    }
     private void GenerateBoard()
     {
         CellBoard.GetComponent<GridLayoutGroup>().constraintCount = COLUMNS;
@@ -41,7 +71,23 @@ public class Game : MonoBehaviour
     private void AddWord(string word)
     {
         word = word.ToUpper();
-        Debug.Log("AddWord(" + word + ") called.");
+        if (word.Length > COLUMNS && word.Length > ROWS)
+        {
+            Debug.Log("'" + word + "' is too large to fit on the board!");
+            return;
+        }
+        //if (highlight)
+        //{
+        //    for (int row = 0; row < ROWS; row++)
+        //    {
+        //        for (int column = 0; column < COLUMNS; column++)
+        //        {
+        //            cells[column, row].Highlight(false);
+        //        }
+        //    }
+        //}
+        if (excess)
+            Debug.Log("AddWord(" + word + ") called.");
         List<Cell> potentialCells = new List<Cell>();
         for (int row = 0; row < COLUMNS; row++)
         {
@@ -54,9 +100,27 @@ public class Game : MonoBehaviour
         bool blacklist = false;
         int progress = 0;
         List<Cell> whitelist = new List<Cell>();
+        Cell originCell = potentialCells[0];
         // Pick a random cell and see if it works
         while(!blacklist && !completed && potentialCells.Count > 0)
         {
+            // Pick random cell
+            originCell = potentialCells[Random.Range(0, potentialCells.Count - 1)];
+            if (excess)
+                Debug.Log("picked originCell: " + originCell.Coordinate());
+            // If the chosen cell already has a letter that doesn't line up, then abandon
+            if (originCell.Locked() && originCell.Character() == word[0])
+            {
+                if (excess)
+                    Debug.Log("originCell is locked with wrong letter. Abandoning.");
+                blacklist = true;
+            }
+
+            Cell selectedCell = originCell;
+            if (excess)
+                Debug.Log("picked selectedCell: " + selectedCell.Coordinate());
+            potentialCells.Remove(originCell);
+
             // when locking all cells in whitelist, don't forget to lock originCell too!!!
             List<Vector2Int> directions = new List<Vector2Int>();
             directions.Add(new Vector2Int(0, -1)); // N
@@ -67,23 +131,14 @@ public class Game : MonoBehaviour
             directions.Add(new Vector2Int(-1, -1)); // NW
             directions.Add(new Vector2Int(1, 1)); // SE
             directions.Add(new Vector2Int(-1, 1)); // SW
-            Cell originCell = potentialCells[Random.Range(0, potentialCells.Count-1)];
-            Debug.Log("picked originCell: " + originCell.Coordinate());
-            Cell selectedCell = originCell;
-            Debug.Log("picked selectedCell: " + selectedCell.Coordinate());
-            potentialCells.Remove(originCell);
-            // If the chosen cell already has a letter that doesn't line up, then abandon
-            if (originCell.Locked() && originCell.Character() == word[0])
-            {
-                Debug.Log("originCell is locked with wrong letter. Abandoning.");
-                blacklist = true;
-            }
+            
             // See if the chosen cell works by expanding in each direction until it completes or all directions run out
             while (!blacklist && !completed && directions.Count > 0)
             {
                 // Choose a random direction
                 Vector2Int direction = directions[Random.Range(0, directions.Count-1)];
-                Debug.Log("Direction chosen: " + direction);
+                if (excess)
+                    Debug.Log("Direction chosen: " + direction);
                 directions.Remove(direction);
                 // Expand in direction until completion or it fails
                 while(!blacklist && !completed && progress < word.Length)
@@ -91,7 +146,8 @@ public class Game : MonoBehaviour
                     // Cell is unlocked
                     if (!selectedCell.Locked())
                     {
-                        Debug.Log("selectedCell is unlocked. Adding " + word[progress]);
+                        if (excess)
+                            Debug.Log("selectedCell is unlocked. Adding " + word[progress]);
                         selectedCell.Character(word[progress]);
                         whitelist.Add(selectedCell);
                         progress++;
@@ -99,41 +155,62 @@ public class Game : MonoBehaviour
                     // Cell is locked and has incorrect letter; failure
                     else if (selectedCell.Character() != word[progress])
                     {
-                        Debug.Log("selectedCell is locked with wrong letter. Abandoning.");
+                        if (excess && directions.Count <= 0)
+                        {
+                            Debug.Log("selectedCell is locked with wrong letter, and final direction has failed. Picking new originCell.");
+                        }
+                        else if (excess)
+                        {
+                            Debug.Log("selectedCell is locked with wrong letter. Abandoning.");
+                        }
+                            
                         whitelist.Clear();
                         blacklist = true;
                         progress = 0;
+                        selectedCell = originCell;
                     }
                     // Cell is locked, but has correct letter
                     else
                     {
-                        Debug.Log("selectedCell is locked with correct letter. Moving forward.");
+                        if (excess)
+                            Debug.Log("selectedCell is locked with correct letter. Moving forward.");
                         progress++;
                     }
-                    Vector2Int newCoordinate = new Vector2Int(selectedCell.Coordinate().x + direction.x, selectedCell.Coordinate().y + direction.y);
-                    // Coordinate is out of bounds and there are still more letters to add; failure
-                    if (!IsValidCoordinate(newCoordinate) && progress < word.Length-1)
+                    if (!blacklist)
                     {
-                        Debug.Log(newCoordinate + " is out of bounds, but there are still more letters to add. Abandoning.");
-                        for(int i = 0; i < whitelist.Count; i++)
+                        Vector2Int newCoordinate = new Vector2Int(selectedCell.Coordinate().x + direction.x, selectedCell.Coordinate().y + direction.y);
+                        // Coordinate is out of bounds and there are still more letters to add; failure
+                        if (!IsValidCoordinate(newCoordinate) && progress < word.Length)
                         {
-                            whitelist[i].Character('A');
+                            if (excess && directions.Count <= 0)
+                            {
+                                Debug.Log(newCoordinate + " is out of bounds, but there are still more letters to add, and final direction has failed. Picking new originCell.");
+                            }
+                            else if (excess)
+                                Debug.Log(newCoordinate + " is out of bounds, but there are still more letters to add. Abandoning.");
+                            for (int i = 0; i < whitelist.Count; i++)
+                            {
+                                whitelist[i].Character('A');
+                            }
+                            whitelist.Clear();
+                            blacklist = true;
+                            progress = 0;
+                            selectedCell = originCell;
                         }
-                        whitelist.Clear();
-                        blacklist = true;
-                        progress = 0;
-                    }
-                    // Word is completed.
-                    else if (progress >= word.Length)
-                    {
-                        Debug.Log(word[progress-1] + " is the last letter, so finishing.");
-                        completed = true;
-                    }
-                    // Coordinate is not out of bounds and there are still more letters to add
-                    else
-                    {
-                        selectedCell = cells[newCoordinate.x, newCoordinate.y];
-                        Debug.Log("picked selectedCell: " + selectedCell.Coordinate());
+                        // Word is completed.
+                        else if (progress >= word.Length)
+                        {
+                            if (excess)
+                                Debug.Log(word[progress - 1] + " is the last letter, so finishing.");
+                            completed = true;
+                        }
+                        // Coordinate is not out of bounds and there are still more letters to add
+                        else
+                        {
+                            selectedCell = cells[newCoordinate.x, newCoordinate.y];
+                            if (excess)
+                                Debug.Log("picked selectedCell: " + selectedCell.Coordinate());
+                        }
                     }
                 }
                 blacklist = false;
@@ -141,16 +218,21 @@ public class Game : MonoBehaviour
         }
         if (completed)
         {
-            Debug.Log("Word successfully added!");
+            Debug.Log(word + " successfully added!");
+            knownWords.Add(word);
+            if (highlight)
+                originCell.Highlight(true);
+            originCell.Locked(true);
             for (int i = 0; i < whitelist.Count; i++)
             {
                 whitelist[i].Locked(true);
+                if (highlight)
+                    whitelist[i].Highlight(true);
             }
         }
         else
         {
-            Debug.Log("Catastrophic Failure");
-            print("Could not add '" + word + "' to board!");
+            Debug.Log("Could not add '" + word + "' to board!");
         }
     }
 
