@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
@@ -8,19 +10,19 @@ using UnityEngine.UIElements;
 
 public class Game : MonoBehaviour
 {
-    [SerializeField] private GameObject CellPrefab, CellBoard;
-    private const int COLUMNS=9, ROWS=9;
+    [SerializeField] private GameObject CellPrefab, CellBoard, KnownWords;
+    private const int COLUMNS=10, ROWS=10;
     [SerializeField] private float cellSize;
     private Cell[,] cells = new Cell[COLUMNS, ROWS];
     private List<Cell> unoccupiedCells = new List<Cell>();
-    [SerializeField] private List<string> words;
+    private List<string> words = new List<string>() { "fall", "winter", "spring", "summer", "monster", "skeletons", "mermaid", "robot", "cigars", "cig", "hot" };
     private List<string> knownWords = new List<string>();
     [SerializeField] private bool excess, highlight;
     private int progress2 = 0;
     void Start()
     {
         GenerateBoard();
-        AddWords(words);
+        //AddWords(words);
     }
     private void AddWords(List<string> list)
     {
@@ -29,15 +31,12 @@ public class Game : MonoBehaviour
             AddWord(list[i]);
         }
         ScrambleUnlocked();
-        for (int i = 0; i < knownWords.Count; i++)
-        {
-
-        }
     }
     public void Next()
     {
         if (progress2 >= words.Count)
         {
+            ScrambleUnlocked();
             return;
         }
         AddWord(words[progress2]);
@@ -76,16 +75,16 @@ public class Game : MonoBehaviour
             Debug.Log("'" + word + "' is too large to fit on the board!");
             return;
         }
-        //if (highlight)
-        //{
-        //    for (int row = 0; row < ROWS; row++)
-        //    {
-        //        for (int column = 0; column < COLUMNS; column++)
-        //        {
-        //            cells[column, row].Highlight(false);
-        //        }
-        //    }
-        //}
+        if (highlight)
+        {
+            for (int row = 0; row < ROWS; row++)
+            {
+                for (int column = 0; column < COLUMNS; column++)
+                {
+                    cells[column, row].Highlight(false);
+                }
+            }
+        }
         if (excess)
             Debug.Log("AddWord(" + word + ") called.");
         List<Cell> potentialCells = new List<Cell>();
@@ -121,7 +120,6 @@ public class Game : MonoBehaviour
                 Debug.Log("picked selectedCell: " + selectedCell.Coordinate());
             potentialCells.Remove(originCell);
 
-            // when locking all cells in whitelist, don't forget to lock originCell too!!!
             List<Vector2Int> directions = new List<Vector2Int>();
             directions.Add(new Vector2Int(0, -1)); // N
             directions.Add(new Vector2Int(1, 0)); // E
@@ -218,17 +216,27 @@ public class Game : MonoBehaviour
         }
         if (completed)
         {
+            // Locking in word.
             Debug.Log(word + " successfully added!");
             knownWords.Add(word);
             if (highlight)
                 originCell.Highlight(true);
             originCell.Locked(true);
+            unoccupiedCells.Remove(originCell);
             for (int i = 0; i < whitelist.Count; i++)
             {
                 whitelist[i].Locked(true);
                 if (highlight)
                     whitelist[i].Highlight(true);
+                unoccupiedCells.Remove(whitelist[i]);
             }
+
+            // Add word to word list
+            GameObject label = new GameObject();
+            label.transform.SetParent(KnownWords.transform);
+            label.AddComponent<TMPro.TextMeshProUGUI>();
+            label.GetComponent<TMP_Text>().text = word;
+            label.GetComponent<TMP_Text>().horizontalAlignment = HorizontalAlignmentOptions.Center;
         }
         else
         {
